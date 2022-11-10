@@ -43,6 +43,32 @@ def query_yes_no(question, default="yes"):
             "Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
 
 
+def read_input(input_path: str) -> str:
+    """ Reads the input file and returns the contents """
+
+    # If the input path is None, use the standard input
+    if input_path is None:
+        return sys.stdin.read()
+    with open(input_path, "r") as input_file:
+        try:
+            return input_file.read()
+        except UnicodeDecodeError:
+            print("Error: Could not read input file")
+            sys.exit(1)
+        except FileNotFoundError:
+            print("Error: Could not find input file")
+            sys.exit(1)
+        except PermissionError:
+            print("Error: Insufficient file permissions")
+            sys.exit(1)
+        except KeyboardInterrupt:
+            # Exit gracefully
+            sys.exit(0)
+        except:
+            print("Error: Unknown error")
+            sys.exit(1)
+
+
 def infer_date(date: str):
     """ Infers the date from the provided string """
 
@@ -115,18 +141,15 @@ def parse_args() -> dict:
 
     # Check if the date is in the future
     if date > datetime.now():
-        query_yes_no(
-            "Warning: The date provided is in the future. Are you sure you want to continue?")
+        if not query_yes_no(
+                "Warning: The date provided is in the future. Are you sure you want to continue?"):
+            sys.exit(0)
 
     # Check the input file
     # TODO: Implement this
-    inputpath = args.input_path
-    if inputpath is None:
-        inputpath = sys.stdin
-    else:
-        inputpath = open(inputpath, "r")
+    input_path = args.input_path
 
-    return {'date': date, 'input_file': inputpath}
+    return {'date': date, 'input_path': input_path}
 
 
 def upload_log(date: datetime, contents: str) -> bool:
@@ -141,16 +164,12 @@ def main():
 
     # Determine the date to log
     date = args.get("date")
-    input_file = args.get("input_file")
 
     # Read the input file
-    log_contents = input_file.read()
+    log_contents = read_input(args.get("input_path"))
 
     # Upload the log
     success = upload_log(date, log_contents)
-
-    # Close the input file
-    input_file.close()
 
     if success:
         # Display a success message and exit
