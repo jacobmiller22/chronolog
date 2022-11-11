@@ -1,2 +1,3 @@
 argparse
-datetime
+google-api-python-client
+google-auth-oauthlib

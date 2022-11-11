@@ -58,6 +58,7 @@ class LogApi (metaclass=LogApiMeta):
             str: _description_
         """
         grouping = self.get_grouping()
+        
         if grouping == "daily":
             return date.strftime("%Y-%m-%d")
         if grouping == "weekly":
