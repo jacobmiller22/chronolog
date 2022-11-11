@@ -3,7 +3,7 @@
 from datetime import datetime
 import argparse
 import sys
-import chronolog
+from chronolog import ChronologApp
 
 
 def query_yes_no(question, default="yes"):
@@ -170,24 +170,26 @@ def main():
 
     # Determine the date to log
     date: datetime = args.get("date")
-    print(f"Logging for {date.strftime('%Y-%m-%d')}")
+    
+    # Create the Chronolog object
+    app = ChronologApp(dest="google_drive")
 
     # Read the input file")
+    print(f"Logging for {date.strftime('%Y-%m-%d')}")
     log_contents = read_input(args.get("input_path"))
 
     # Upload the log
-    success = chronolog.upload_log(date, log_contents)
+    success = app.upload_log(date, log_contents)
 
     if success:
         # Display a success message and exit
-        print(
-            f"\nSuccessfully logged the day: {date.strftime('Y-%m-%d')}\nGoodbye!")
-        return 0
-
-    # Display an error message and exit
-    print(
-        f"\nFailed to log the day: {date.strftime('Y-%m-%d')}\nGoodbye!")
-    return 1
+        print(f"Successfully logged the day: {date.strftime('Y-%m-%d')}")
+    else:
+        # Display an error message and exit
+        print(f"Failed to log the day: {date.strftime('Y-%m-%d')}")
+    
+    print("Goodbye!")
+    return not success
 
 
 if __name__ == "__main__":
