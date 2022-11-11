@@ -3,6 +3,7 @@
 from datetime import datetime
 import argparse
 import sys
+import chronolog
 
 
 def query_yes_no(question, default="yes"):
@@ -48,8 +49,19 @@ def read_input(input_path: str) -> str:
 
     # If the input path is None, use the standard input
     if input_path is None:
-        return sys.stdin.read()
+        print("Reading from standard input. Press Ctrl+D to finish.")
+        try:
+            contents = sys.stdin.read()
+            print("") # Add a newline after Ctrl+D
+            return contents
+        except KeyboardInterrupt:
+            # Exit gracefully
+            sys.exit(0)
+        except:
+            print("Error: Unknown error")
+            sys.exit(1)
     with open(input_path, "r") as input_file:
+        print("Reading input file...")
         try:
             return input_file.read()
         except UnicodeDecodeError:
@@ -61,9 +73,6 @@ def read_input(input_path: str) -> str:
         except PermissionError:
             print("Error: Insufficient file permissions")
             sys.exit(1)
-        except KeyboardInterrupt:
-            # Exit gracefully
-            sys.exit(0)
         except:
             print("Error: Unknown error")
             sys.exit(1)
@@ -152,9 +161,6 @@ def parse_args() -> dict:
     return {'date': date, 'input_path': input_path}
 
 
-def upload_log(date: datetime, contents: str) -> bool:
-    """ Uploads the log"""
-    return True
 
 
 def main():
@@ -163,13 +169,14 @@ def main():
     args = parse_args()
 
     # Determine the date to log
-    date = args.get("date")
+    date: datetime = args.get("date")
+    print(f"Logging for {date.strftime('%Y-%m-%d')}")
 
-    # Read the input file
+    # Read the input file")
     log_contents = read_input(args.get("input_path"))
 
     # Upload the log
-    success = upload_log(date, log_contents)
+    success = chronolog.upload_log(date, log_contents)
 
     if success:
         # Display a success message and exit
