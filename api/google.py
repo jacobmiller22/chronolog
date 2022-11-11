@@ -6,18 +6,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from api import api
-import json
 
 class GoogleLogApi(api.LogApi):
-    
-    _GOOGLE_DRIVE_API_URL = "https://www.googleapis.com/drive/v3/files"
-    _GOOGLE_DRIVE_API_AUTH_URL = "https://www.googleapis.com/auth/drive.file"
-    
-    
-    _GOOGLE_CHRONOLOG_CLIENT_ID = "445106395721-vgod49ld0oiacrvl4nfkmul4q7hjfmq0.apps.googleusercontent.com"
-    _GOOGLE_CHRONOLOG_CLIENT_SECRET = "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"
-    _GOOGLE_OAUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-    _GOOGLE_TOKEN_ENDPOINT = "https://www.googleapis.com/oauth2/v4/token"
+    """ The GoogleLogApi class is responsible for uploading logs and authenticating to Google Drive. """
     
     _GOOGLE_CLIENT_SECRETS_FILE = "google_credentials.json"
     _GOOGLE_DRIVE_API_SCOPE = "https://www.googleapis.com/auth/drive.file"
