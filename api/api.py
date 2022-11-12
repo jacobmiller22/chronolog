@@ -1,6 +1,7 @@
 """ Imports """
 from datetime import datetime
 
+
 class LogApiMeta(type):
     """A Parser metaclass that will be used for parser class creation.
     """
@@ -13,7 +14,7 @@ class LogApiMeta(type):
             if not hasattr(subclass, attr) or not callable(getattr(subclass, attr)):
                 return False
         return True
-    
+
 
 class LogApi (metaclass=LogApiMeta):
     """_summary_
@@ -27,15 +28,15 @@ class LogApi (metaclass=LogApiMeta):
     Returns:
         _type_: _description_
     """
-    
+
     _grouping_options = ["daily", "weekly", "monthly", "yearly"]
-    
+
     def __init__(self, grouping=_grouping_options[0]) -> None:
         self.set_grouping(grouping)
-    
+
     def get_grouping(self) -> str:
         return self._grouping
-    
+
     def set_grouping(self, grouping: str) -> None:
         """_summary_
 
@@ -46,7 +47,7 @@ class LogApi (metaclass=LogApiMeta):
             self._grouping = grouping
         else:
             raise ValueError("Invalid grouping option")
-    
+
     def find_group(self, date: datetime) -> str:
         """
         Gets the grouping date for the given date
@@ -58,7 +59,7 @@ class LogApi (metaclass=LogApiMeta):
             str: _description_
         """
         grouping = self.get_grouping()
-        
+
         if grouping == "daily":
             return date.strftime("%Y-%m-%d")
         if grouping == "weekly":
@@ -67,9 +68,9 @@ class LogApi (metaclass=LogApiMeta):
             return date.strftime("%Y-%m")
         if grouping == "yearly":
             return date.strftime("%Y")
-        
+
         raise ValueError("Invalid grouping option or date")
-    
+
     def upload_log(self, date: datetime, log_contents: str) -> bool:
         """_summary_
 
@@ -81,11 +82,11 @@ class LogApi (metaclass=LogApiMeta):
             bool: _description_
         """
         return True
-    
+
     def find_log_for_grouping(self, date: datetime) -> str:
         """
         Finda
-        
+
         Args:
             date (datetime): _description_
 

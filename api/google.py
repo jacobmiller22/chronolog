@@ -7,21 +7,22 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from api import api
 
+
 class GoogleLogApi(api.LogApi):
     """ The GoogleLogApi class is responsible for uploading logs and authenticating to Google Drive. """
-    
+
     _GOOGLE_CLIENT_SECRETS_FILE = "google_credentials.json"
     _GOOGLE_DRIVE_API_SCOPE = "https://www.googleapis.com/auth/drive.file"
-    
+
     _credentials = None
-    
-    def __init__(self) -> None:
+
+    def __init__(self, config) -> None:
+
         if not self.auth():
             raise Exception("Could not authenticate with Google Drive")
-        super().__init__()
+        grouping = config.get("google_drive.grouping", config.get("grouping"))
+        super().__init__(grouping)
 
-    
-    
     def _auth(self) -> bool:
         """
         Helper function to authenticate with Google Drive, will authenticate regardless whether or not the user has already authenticated
@@ -29,20 +30,22 @@ class GoogleLogApi(api.LogApi):
         Returns:
             bool: whether or not the authentication was successful
         """
-        client_secrets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "credentials", self._GOOGLE_CLIENT_SECRETS_FILE))
-        flow = InstalledAppFlow.from_client_secrets_file(client_secrets_path, scopes=[self._GOOGLE_DRIVE_API_SCOPE])
-        
+        client_secrets_path = os.path.abspath(os.path.join(os.path.dirname(
+            __file__), "credentials", self._GOOGLE_CLIENT_SECRETS_FILE))
+        flow = InstalledAppFlow.from_client_secrets_file(
+            client_secrets_path, scopes=[self._GOOGLE_DRIVE_API_SCOPE])
+
         credentials = flow.run_local_server(
-            host='localhost',port=8080, 
-            authorization_prompt_message='Please visit this URL: {url}', 
+            host='localhost', port=8080,
+            authorization_prompt_message='Please visit this URL: {url}',
             success_message='The auth flow is complete; you may close this window.',
             open_browser=True)
-            
+
         # Give the credentials object to the GoogleLogApi class
         self._credentials = credentials
-        
-        return self._credentials is not None 
-        
+
+        return self._credentials is not None
+
     def auth(self) -> bool:
         """
         Authenticates the user with Google in the required scopes. If the user has already authenticated, this will not prompt the user to authenticate again.
@@ -50,11 +53,12 @@ class GoogleLogApi(api.LogApi):
         Returns:
             bool: whether or not the authentication was successful
         """
-        
+
         # Get the credentials from the file
         creds = None
         if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', [self._GOOGLE_DRIVE_API_SCOPE])
+            creds = Credentials.from_authorized_user_file(
+                'token.json', [self._GOOGLE_DRIVE_API_SCOPE])
 
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
@@ -62,7 +66,7 @@ class GoogleLogApi(api.LogApi):
                 creds.refresh(Request())
                 self._credentials = creds
             else:
-                self._auth() # Stores the credentials in the class
+                self._auth()  # Stores the credentials in the class
             # Save the credentials for the next run
             if self._credentials is not None:
                 with open('token.json', 'w', encoding="utf8") as token:
@@ -70,10 +74,10 @@ class GoogleLogApi(api.LogApi):
         # Otherwise, give the credentials object to the GoogleLogApi class
         else:
             self._credentials = creds
-        
+
         # Success if the credentials are not None
         return self._credentials is not None
-    
+
     def _build_batch_requests(self, title: str, date: str, contents: str, doc: dict):
         """
         Creates a new batch requets list for the Google Drive API
@@ -85,10 +89,11 @@ class GoogleLogApi(api.LogApi):
             doc (dict): the current document specification
         """
         # TODO: Add a title field to the document
-        
+
         # Check if the document has an entry for this date
-        date_exists = doc['body']['content'][1]['paragraph']['elements'][0]['textRun']['content'].find(date) != -1
-        
+        date_exists = doc['body']['content'][1]['paragraph']['elements'][0]['textRun']['content'].find(
+            date) != -1
+
         # If the date exists, then we need to update the contents and not create a new heading
         insertions = []
         if date_exists:
@@ -121,7 +126,7 @@ class GoogleLogApi(api.LogApi):
                     }
                 },
             ]
-        
+
         return [
             *insertions,
             {
@@ -149,8 +154,7 @@ class GoogleLogApi(api.LogApi):
                 }
             },
         ]
-    
-    
+
     def upload_log(self, date: datetime, log_contents: str) -> bool:
         """_summary_
 
@@ -163,14 +167,15 @@ class GoogleLogApi(api.LogApi):
         """
 
         group: str = self.find_group(date)
-        
+
         print("Searching drive for log for group: " + group)
         # Try to find the log for the given group
         with build('drive', 'v3', credentials=self._credentials) as ds:
             target_log_id = None
             next_page_token = None
             while True:
-                results = ds.files().list(q=f"name='{group}' and mimeType='application/vnd.google-apps.document'", pageToken=next_page_token).execute()
+                results = ds.files().list(
+                    q=f"name='{group}' and mimeType='application/vnd.google-apps.document'", pageToken=next_page_token).execute()
                 items = results.get('files', [])
                 for item in items:
                     # If the log is found, store the id
@@ -182,20 +187,21 @@ class GoogleLogApi(api.LogApi):
                     break
                 # Set the next page token
                 next_page_token = results.get('nextPageToken')
-                    
+
                 print(results)
-        
+
         with build("docs", "v1", credentials=self._credentials) as docs:
             if target_log_id is None:
                 print("Log not found, creating new log...")
-                target_log_id = docs.documents().create(body={"title": group}).execute()['documentId'] # Creates a blank document with the title of the group, and stores the id
+                # Creates a blank document with the title of the group, and stores the id
+                target_log_id = docs.documents().create(
+                    body={"title": group}).execute()['documentId']
 
             # Update the log with the new contents
-            
+
             if target_log_id is None:
                 print("Failed to create new log")
 
-            
             # Get the current contents of the log
             log = docs.documents().get(documentId=target_log_id).execute()
 
@@ -203,5 +209,5 @@ class GoogleLogApi(api.LogApi):
             docs.documents().batchUpdate(documentId=target_log_id, body={
                 "requests": self._build_batch_requests(title=group, date=date.strftime("%m/%d/%Y"), contents=log_contents, doc=log)
             }).execute()
-        
+
         return True

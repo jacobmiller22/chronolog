@@ -52,7 +52,7 @@ def read_input(input_path: str) -> str:
         print("Reading from standard input. Press Ctrl+D to finish.")
         try:
             contents = sys.stdin.read()
-            print("") # Add a newline after Ctrl+D
+            print("")  # Add a newline after Ctrl+D
             return contents
         except KeyboardInterrupt:
             # Exit gracefully
@@ -161,8 +161,6 @@ def parse_args() -> dict:
     return {'date': date, 'input_path': input_path}
 
 
-
-
 def main():
     """ Main entry point of the Chronolog CLI """
 
@@ -170,9 +168,9 @@ def main():
 
     # Determine the date to log
     date: datetime = args.get("date")
-    
+
     # Create the Chronolog object
-    app = ChronologApp(dest="google_drive")
+    app = ChronologApp(dest="google_drive", path_to_config=None)
 
     # Read the input file")
     print(f"Logging for {date.strftime('%Y-%m-%d')}")
@@ -183,11 +181,11 @@ def main():
 
     if success:
         # Display a success message and exit
-        print(f"Successfully logged the day: {date.strftime('Y-%m-%d')}")
+        print(f"Successfully logged the day: {date.strftime('%Y-%m-%d')}")
     else:
         # Display an error message and exit
         print(f"Failed to log the day: {date.strftime('Y-%m-%d')}")
-    
+
     print("Goodbye!")
     return not success
 
