@@ -46,12 +46,12 @@ class GoogleLogApi(api.LogApi):
         if not isinstance(path, list):
             raise ValueError("Directory path must be a list")
         # Check if this is a shared drive, if so, the first item in the path will be the name of the shared drive
-        drive_name = "My Drive"
+
+        drive_name = path[0]
+        path = path[1:]
         parent_ids = ['root']
         if self._config.get("google_drive.is_shared_drive", False):
-            drive_name = path[0]
-            path = path[1:]
-            # TODO: If drive_name is not "My Drive", then get the id of the shared drive and set it as the first parent id
+            # TODO: get the id of the shared drive and set it as the first parent id
             # Get the Google Drive API service resource
             parent_ids = ['root']  # TODO: Set the id of the shared drive here
 
@@ -64,7 +64,7 @@ class GoogleLogApi(api.LogApi):
                 # If the folder does not exist, create it
                 if folder_id is None:
                     folder_id = self.__create_file(
-                        ds=ds, title=path, parents=parent_ids, mime_type="application/vnd.google-apps.folder")
+                        ds=ds, title=path, parents=[parent_ids[-1]], mime_type="application/vnd.google-apps.folder")
 
                 if folder_id is None:
                     # If the folder could not be created, return False
