@@ -1,11 +1,14 @@
 """ Imports """
 from datetime import datetime
 import os
+from typing import Union
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, Resource
+from googleapiclient.errors import HttpError
 from api import api
+from config import Config
 
 
 class GoogleLogApi(api.LogApi):
@@ -15,13 +18,64 @@ class GoogleLogApi(api.LogApi):
     _GOOGLE_DRIVE_API_SCOPE = "https://www.googleapis.com/auth/drive.file"
 
     _credentials = None
+    _config = None
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: Config) -> None:
 
         if not self.auth():
             raise Exception("Could not authenticate with Google Drive")
+
         grouping = config.get("google_drive.grouping", config.get("grouping"))
+        self._config = config
+        # Check if the parents ids are specified for the path in the config
+        if config.get("google_drive._parents_path") is None:
+            self.__set_path_parent_ids()
         super().__init__(grouping)
+
+    def __set_path_parent_ids(self) -> bool:
+        """
+        Sets the parent ids for the path in the config
+
+        Returns:
+            bool: whether or not the parent ids were set successfully
+        """
+        # Get the parent ids for the path
+        path = self._config.get("google_drive.path")
+        if path is None:
+            raise ValueError("Directory path not specified in the config")
+        if not isinstance(path, list):
+            raise ValueError("Directory path must be a list")
+        # Check if this is a shared drive, if so, the first item in the path will be the name of the shared drive
+        drive_name = "My Drive"
+        parent_ids = ['root']
+        if self._config.get("google_drive.is_shared_drive", False):
+            drive_name = path[0]
+            path = path[1:]
+            # TODO: If drive_name is not "My Drive", then get the id of the shared drive and set it as the first parent id
+            # Get the Google Drive API service resource
+            parent_ids = ['root']  # TODO: Set the id of the shared drive here
+
+        with build('drive', 'v3', credentials=self._credentials) as ds:
+
+            for path in path:
+                # Get the parent id for the current directory
+                folder_id = self._find_target_document(
+                    ds=ds, q=f"name='{path}' and mimeType='application/vnd.google-apps.folder' and trashed=false")
+                # If the folder does not exist, create it
+                if folder_id is None:
+                    folder_id = self.__create_file(
+                        ds=ds, title=path, parents=parent_ids, mime_type="application/vnd.google-apps.folder")
+
+                if folder_id is None:
+                    # If the folder could not be created, return False
+                    return False
+                # Add the folder id to the parent ids
+                parent_ids.append(folder_id)
+
+        # Set the parent ids in the config
+        self._config.put("google_drive._parents_path", parent_ids)
+
+        return True
 
     def _auth(self) -> bool:
         """
@@ -155,6 +209,61 @@ class GoogleLogApi(api.LogApi):
             },
         ]
 
+    def _find_target_document(self, ds: Resource, q: str) -> Union[str, None]:
+        """
+        Finds the target document in Google Drive using the query string
+
+        Args:
+            ds (Resource): The Google Drive API service resource
+            title (str): The title of the document
+            q (str): The query to search for the document
+
+        Returns:
+            str: The id of the document, or None if the document does not exist
+        """
+
+        next_page_token = None
+        while True:
+            items = None
+            try:
+                results = ds.files().list(q=q, pageToken=next_page_token).execute()
+                items = results.get('files')
+            except HttpError as e:
+                print(e)
+                return None
+            if len(items) == 1:
+                return items[0]['id']
+            if len(items) > 1:
+                raise ValueError(
+                    "Multiple documents with the same title exist in the path")
+            if results.get('nextPageToken') is None:
+                return None
+
+            next_page_token = results.get('nextPageToken')
+
+    def __create_file(self, ds, title: str, parents: list, mime_type: str,) -> str:
+        """
+        Creates a new file in Google Drive
+
+        Args:
+            title (str): The title of the document
+            parents (list): The parent folders of the document
+            mimeType (str): The mime type of the document
+            ds: The Google Drive service
+
+        Returns:
+            str: The id of the document
+        """
+        # Create the document
+        file_metadata = {
+            'name': title,
+            'mimeType': mime_type,
+            'parents': parents
+        }
+
+        file = ds.files().create(body=file_metadata, fields='id').execute()
+        return file.get('id')
+
     def upload_log(self, date: datetime, log_contents: str) -> bool:
         """_summary_
 
@@ -168,37 +277,23 @@ class GoogleLogApi(api.LogApi):
 
         group: str = self.find_group(date)
 
-        print("Searching drive for log for group: " + group)
         # Try to find the log for the given group
+        print("Searching drive for log for group: " + group)
+        target_log_id = None
         with build('drive', 'v3', credentials=self._credentials) as ds:
-            target_log_id = None
-            next_page_token = None
-            while True:
-                results = ds.files().list(
-                    q=f"name='{group}' and mimeType='application/vnd.google-apps.document'", pageToken=next_page_token).execute()
-                items = results.get('files', [])
-                for item in items:
-                    # If the log is found, store the id
-                    if item['name'] == group:
-                        target_log_id = item['id']
-                        break
-                # If there is not another page of results, break
-                if results.get('nextPageToken') is None:
-                    break
-                # Set the next page token
-                next_page_token = results.get('nextPageToken')
+            target_log_id = self._find_target_document(
+                ds=ds, q=f"name='{group}' and mimeType='application/vnd.google-apps.document' and '{self._config.get('google_drive._parents_path')[-1]}' in parents")
 
-                print(results)
-
-        with build("docs", "v1", credentials=self._credentials) as docs:
             if target_log_id is None:
                 print("Log not found, creating new log...")
                 # Creates a blank document with the title of the group, and stores the id
-                target_log_id = docs.documents().create(
-                    body={"title": group}).execute()['documentId']
+                # target_log_id = docs.documents().create(
+                #     body={"title": group}).execute()['documentId']
+                target_log_id = self.__create_file(ds=ds, title=group, parents=[self._config.get(
+                    "google_drive._parents_path")[-1]], mime_type="application/vnd.google-apps.document")
 
+        with build("docs", "v1", credentials=self._credentials) as docs:
             # Update the log with the new contents
-
             if target_log_id is None:
                 print("Failed to create new log")
 
