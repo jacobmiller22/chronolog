@@ -13,8 +13,8 @@ class ChronologApp:
 
     def __init__(self, dest: Union[None, str] = None, path_to_config: Union[None, str] = None):
         if path_to_config is None:
-            path_to_config = 'config.json'
-
+            raise FileNotFoundError("No config file found")
+        print(f"Using config file: {path_to_config}")
         self._config = Config(path_to_config=path_to_config)
         self.set_logger(dest)
 
