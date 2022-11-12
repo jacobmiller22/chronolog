@@ -5,16 +5,18 @@ import os
 class Config:
 
     _config = None
+    _path = None
 
     def __init__(self, path_to_config):
-        self.__load_config(path_to_config)
+        self._path = path_to_config
+        self.__load_config()
 
-    def __load_config(self, path_to_config):
+    def __load_config(self):
 
-        if not os.path.exists(path_to_config):
+        if not os.path.exists(self._path):
             raise FileNotFoundError("Config file not found")
 
-        with open(path_to_config, 'r') as f:
+        with open(self._path, 'r') as f:
             self._config = json.load(f)
 
         # Parse config and make sure it's valid
@@ -40,3 +42,17 @@ class Config:
         for k in split_key[:-1]:
             current = current[k]
         current[split_key[-1]] = value
+
+        # Save the config
+        self.__save()
+
+    def __save(self):
+        """ Saves the current config object to the config file """
+        with open(self._path, 'w') as f:
+            json.dump(self._config, f, indent=2)
+
+    def to_dict(self):
+        """Returns the config as a dict"""
+        if self._config is None:
+            raise ValueError("Config not loaded")
+        return self._config
