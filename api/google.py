@@ -22,14 +22,15 @@ class GoogleLogApi(api.LogApi):
 
     def __init__(self, config: Config) -> None:
 
-        if not self.auth():
-            raise Exception("Could not authenticate with Google Drive")
-
-        grouping = config.get("google_drive.grouping", config.get("grouping"))
         self._config = config
         # Check if the parents ids are specified for the path in the config
         if config.get("google_drive._parents_path") is None:
             self.__set_path_parent_ids()
+
+        if not self.auth():
+            raise Exception("Could not authenticate with Google Drive")
+
+        grouping = config.get("google_drive.grouping", config.get("grouping"))
         super().__init__(grouping)
 
     def __set_path_parent_ids(self) -> bool:
