@@ -56,3 +56,7 @@ class Config:
         if self._config is None:
             raise ValueError("Config not loaded")
         return self._config
+
+    def get_path(self):
+        """ Returns the path to the config file """
+        return self._path

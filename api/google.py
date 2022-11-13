@@ -111,9 +111,10 @@ class GoogleLogApi(api.LogApi):
 
         # Get the credentials from the file
         creds = None
-        if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file(
-                'token.json', [self._GOOGLE_DRIVE_API_SCOPE])
+        token_path = os.path.abspath(os.path.join(
+            os.path.dirname(self._config.get_path()), "google_token.json"))
+        if os.path.exists(token_path):
+            creds = Credentials.from_authorized_user_file(token_path)
 
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
@@ -124,7 +125,7 @@ class GoogleLogApi(api.LogApi):
                 self._auth()  # Stores the credentials in the class
             # Save the credentials for the next run
             if self._credentials is not None:
-                with open('token.json', 'w', encoding="utf8") as token:
+                with open(token_path, 'w', encoding="utf8") as token:
                     token.write(self._credentials.to_json())
         # Otherwise, give the credentials object to the GoogleLogApi class
         else:
