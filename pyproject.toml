@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chronolog-cli"
+version = "0.1.3"
+authors = [
+    { name = "Jacob Miller", email = "jacobmillerdev@gmail.com" },
+]
+description = "Chronolog is an open-source command-line application that allows its users to chronologically log information about their day (hence the name). It was initially created to eleminate the tedious task of creating and organizing documents to log events, findings, progress, and more during the workday."
+readme = "README.md"
+requires-python = ">=3.8.5"
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+keywords = ["chronicle", "log", "chronolog", "journal", "log organizer"]
+dependencies = [
+    "google-api-python-client==2.65.0",
+    "google-auth-oauthlib==0.7.1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/jacobmiller22/chronolog"
+"Bug Tracker" = "https://github.com/jacobmiller22/chronolog/issues"
+
+[tool.setuptools]
+
+[tool.setuptools.package-data]
+chronolog = ["credentials/*"]

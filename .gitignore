@@ -4,3 +4,5 @@ venv
 pyenv.cfg
 token.json
 config.json
+dist
+chronolog_cli.egg-info

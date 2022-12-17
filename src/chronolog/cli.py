@@ -6,7 +6,7 @@ import sys
 import os
 import re
 import json
-from chronolog import ChronologApp
+from chronolog.chronolog import ChronologApp
 
 
 def query_string(question: str, default=None) -> str:

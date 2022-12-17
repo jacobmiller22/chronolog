@@ -7,15 +7,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
-from api import api
-from config import Config
+from chronolog.api import api
+from chronolog.config import Config
+from chronolog.definitions import ROOT_DIR, GOOGLE_CLIENT_SECRETS_FILE, GOOGLE_DRIVE_API_SCOPES
 
 
 class GoogleLogApi(api.LogApi):
     """ The GoogleLogApi class is responsible for uploading logs and authenticating to Google Drive. """
-
-    _GOOGLE_CLIENT_SECRETS_FILE = "google_credentials.json"
-    _GOOGLE_DRIVE_API_SCOPE = "https://www.googleapis.com/auth/drive.file"
 
     _credentials = None
     _config = None
@@ -85,10 +83,10 @@ class GoogleLogApi(api.LogApi):
         Returns:
             bool: whether or not the authentication was successful
         """
-        client_secrets_path = os.path.abspath(os.path.join(os.path.dirname(
-            __file__), "credentials", self._GOOGLE_CLIENT_SECRETS_FILE))
+        client_secrets_path = os.path.normpath(
+            os.path.join(ROOT_DIR, "credentials", GOOGLE_CLIENT_SECRETS_FILE))
         flow = InstalledAppFlow.from_client_secrets_file(
-            client_secrets_path, scopes=[self._GOOGLE_DRIVE_API_SCOPE])
+            client_secrets_path, scopes=GOOGLE_DRIVE_API_SCOPES)
 
         credentials = flow.run_local_server(
             host='localhost', port=8080,

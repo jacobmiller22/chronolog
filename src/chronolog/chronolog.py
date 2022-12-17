@@ -1,8 +1,8 @@
 """ Imports """
 from datetime import datetime
 from typing import Union
-from api import google
-from config import Config
+from chronolog.api import google
+from chronolog.config import Config
 
 
 class ChronologApp:
