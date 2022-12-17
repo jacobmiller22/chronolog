@@ -23,9 +23,6 @@ def query_string(question: str, default=None) -> str:
         except KeyboardInterrupt:
             # Exit gracefully
             sys.exit(0)
-        except:
-            print("Error: Unknown error")
-            sys.exit(1)
 
     return string
 
@@ -61,7 +58,7 @@ def query_choices(question: str, choices: list, default=None) -> str:
     return choices[choice - 1]
 
 
-def query_yes_no(question, default="yes"):
+def query_yes_no(question, default=True):
     """Ask a yes/no question via raw_input() and return their answer.
 
     "question" is a string that is presented to the user.
@@ -76,12 +73,8 @@ def query_yes_no(question, default="yes"):
     valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
     if default is None:
         prompt = " [y/n] "
-    elif default == "yes":
-        prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        prompt = " [Y/n] " if default is True else " [y/N] "
 
     while True:
         print(question + prompt, end="")
