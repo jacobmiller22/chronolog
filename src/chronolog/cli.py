@@ -1,4 +1,3 @@
-
 """ Imports for cli """
 from datetime import datetime
 import argparse
@@ -10,7 +9,7 @@ from chronolog.chronolog import ChronologApp
 
 
 def query_string(question: str, default=None) -> str:
-    """ Queries the user for a string """
+    """Queries the user for a string"""
 
     default_text = f" (default: {default})" if default is not None else ""
     print(f"{question}{default_text}")
@@ -28,7 +27,7 @@ def query_string(question: str, default=None) -> str:
 
 
 def query_choices(question: str, choices: list, default=None) -> str:
-    """ Queries the user for a choice from a list of choices """
+    """Queries the user for a choice from a list of choices"""
 
     # Display the choices
     default_text = f" (default: {default})" if default is not None else ""
@@ -47,8 +46,7 @@ def query_choices(question: str, choices: list, default=None) -> str:
                 choice = int(choice)
         except ValueError:
 
-            print(
-                f"Please enter a number{' or nothing to use the default' if default is not None else ''}")
+            print(f"Please enter a number{' or nothing to use the default' if default is not None else ''}")
             continue
 
         if choice < 1 or choice > len(choices):
@@ -88,12 +86,11 @@ def query_yes_no(question, default=True):
             return valid[default]
         if choice in valid:
             return valid[choice]
-        print(
-            "Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
+        print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 
 def read_input(input_path: str) -> str:
-    """ Reads the input file and returns the contents """
+    """Reads the input file and returns the contents"""
 
     # If the input path is None, use the standard input
     if input_path is None:
@@ -105,9 +102,6 @@ def read_input(input_path: str) -> str:
         except KeyboardInterrupt:
             # Exit gracefully
             sys.exit(0)
-        except:
-            print("Error: Unknown error")
-            sys.exit(1)
     with open(input_path, "r") as input_file:
         print("Reading input file...")
         try:
@@ -121,20 +115,31 @@ def read_input(input_path: str) -> str:
         except PermissionError:
             print("Error: Insufficient file permissions")
             sys.exit(1)
-        except:
-            print("Error: Unknown error")
-            sys.exit(1)
 
 
 def infer_date(date: str):
-    """ Infers the date from the provided string """
+    """Infers the date from the provided string"""
 
     # Possible date patterns
-    patterns = {"ymd": ["%Y-%m-%d",  "%m/%d/%Y", "%m/%d/%y",
-                        "%m/%d/%Y", "%m/%d/%y", "%m/%d", "%m/%d/%Y", "%m/%d/%y"], "md": ["%m-%d", "%m/%d"], "d": ["%d"], "leap-md": ["%Y %m-%d", "%Y %m/%d"], "leap-d": ["%Y %m %d"]}
+    patterns = {
+        "ymd": [
+            "%Y-%m-%d",
+            "%m/%d/%Y",
+            "%m/%d/%y",
+            "%m/%d/%Y",
+            "%m/%d/%y",
+            "%m/%d",
+            "%m/%d/%Y",
+            "%m/%d/%y",
+        ],
+        "md": ["%m-%d", "%m/%d"],
+        "d": ["%d"],
+        "leap-md": ["%Y %m-%d", "%Y %m/%d"],
+        "leap-d": ["%Y %m %d"],
+    }
 
     def try_parse(date: str, pattern: str):
-        """ Tries to parse the date with the provided pattern """
+        """Tries to parse the date with the provided pattern"""
         try:
             return datetime.strptime(date, pattern)
         except ValueError:
@@ -163,8 +168,7 @@ def infer_date(date: str):
 
     for pattern in patterns["leap-d"]:
 
-        inference = try_parse(
-            f"{datetime.now().year} {datetime.now().month} {date}", pattern)
+        inference = try_parse(f"{datetime.now().year} {datetime.now().month} {date}", pattern)
         if inference is not None:
             return inference
 
@@ -173,34 +177,53 @@ def infer_date(date: str):
 
 
 def parse_args() -> dict:
-    """ Parses the command line arguments and returns the args after parsing """
+    """Parses the command line arguments and returns the args after parsing"""
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-D", "--date", required=False,
-                        help="The day to log. Will try infer the date provided. Defaults to today if no date is provided.")
-    parser.add_argument("-f", "--input-path", required=False,
-                        help="The path to the file to use as input for the log. Defaults to the standard input.")
+    parser.add_argument(
+        "-D",
+        "--date",
+        required=False,
+        help="The day to log. Will try infer the date provided. Defaults to today if no date is provided.",
+    )
+    parser.add_argument(
+        "-f",
+        "--input-path",
+        required=False,
+        help="The path to the file to use as input for the log. Defaults to the standard input.",
+    )
 
-    parser.add_argument("-c", "--config", required=False,
-                        help="The path to the configuration file. Defaults to the standard configuration file.")
+    parser.add_argument(
+        "-c",
+        "--config",
+        required=False,
+        help="The path to the configuration file. Defaults to the standard configuration file.",
+    )
 
     # Add subparsers for the different commands
     subparsers = parser.add_subparsers(dest="subcommand", title="subcommands")
 
-    configure_parser = subparsers.add_parser(
-        "configure", help="Configure the chronolog application")
-    configure_parser.add_argument("-o", "--output", required=False,
-                                  help="The path where the configuration file will be created. Defaults to the location: '~/.chronolog'.")
-    configure_parser.add_argument("-D", "--destination", required=False, choices=[
-                                  "google_drive"], help="The destination party for the logs. Defaults to google_drive.")
+    configure_parser = subparsers.add_parser("configure", help="Configure the chronolog application")
+    configure_parser.add_argument(
+        "-o",
+        "--output",
+        required=False,
+        help="The path where the configuration file will be created. Defaults to the location: '~/.chronolog'.",
+    )
+    configure_parser.add_argument(
+        "-D",
+        "--destination",
+        required=False,
+        choices=["google_drive"],
+        help="The destination party for the logs. Defaults to google_drive.",
+    )
 
     args = parser.parse_args()
 
     # Check the config file
     if args.config is None:
-        args.config = os.path.join(os.path.expanduser(
-            "~"), ".chronolog", "config.json")
+        args.config = os.path.join(os.path.expanduser("~"), ".chronolog", "config.json")
 
     # Check if the config file exists, and if not, prompt the user to create it with the configure command
     if not os.path.exists(args.config) and args.subcommand != "configure":
@@ -215,13 +238,11 @@ def parse_args() -> dict:
         date = infer_date(date)
 
     if date is None:
-        parser.error(
-            "Invalid date or could not infer date from provided string")
+        parser.error("Invalid date or could not infer date from provided string")
 
     # Check if the date is in the future
     if date > datetime.now():
-        if not query_yes_no(
-                "Warning: The date provided is in the future. Are you sure you want to continue?"):
+        if not query_yes_no("Warning: The date provided is in the future. Are you sure you want to continue?"):
             sys.exit(0)
 
     # Check the input file
@@ -242,7 +263,7 @@ def parse_args() -> dict:
 
 
 def configure(args):
-    """ Configures the chronolog application """
+    """Configures the chronolog application"""
 
     output_path = args.get("output")
 
@@ -266,7 +287,8 @@ def configure(args):
     config_path = os.path.join(output_path, "config.json")
     if os.path.exists(config_path):
         proceed = query_yes_no(
-            "A configuration file already exists at the specified location. Would you like to overwrite it?")
+            "A configuration file already exists at the specified location. Would you like to overwrite it?"
+        )
         if not proceed:
             print("Goodbye!")
             sys.exit(0)
@@ -281,50 +303,68 @@ def configure(args):
     default_grouping_method = args.get("grouping")
     if default_grouping_method is None:
         default_grouping_method = query_choices(
-            "Enter the default grouping frequency. This affects how the logs will be separated. Destinations can have different grouping frequency", valid_grouping_methods, default=(config.get("grouping") or "monthly"))
+            (
+                "Enter the default grouping frequency. This affects how the logs will be separated. Destinations can"
+                " have different grouping frequency"
+            ),
+            valid_grouping_methods,
+            default=(config.get("grouping") or "monthly"),
+        )
     elif default_grouping_method not in valid_grouping_methods:
         print("Error: Invalid grouping method")
         sys.exit(1)
-    config['grouping'] = default_grouping_method
+    config["grouping"] = default_grouping_method
 
     # Ask the user for their preferred destination
     valid_destinations = ["google_drive"]
     destination = args.get("destination")
     if destination is None:
         destination = query_choices(
-            "Enter the destination for the logs.", valid_destinations, default=(config.get("destination") or "google_drive"))
+            "Enter the destination for the logs.",
+            valid_destinations,
+            default=(config.get("destination") or "google_drive"),
+        )
     elif destination not in valid_destinations:
         print("Error: Invalid destination")
         sys.exit(1)
-    config['destination'] = destination
+    config["destination"] = destination
     config[destination] = config.get(destination) or {}
 
     # Destination specific configuration
     if destination == "google_drive":
         # Ask the user for the path in their google drive
-        default_path = (None or config.get(destination).get("path"))
+        default_path = None or config.get(destination).get("path")
         # Pretty the default path
         if default_path is not None:
             default_path = os.path.normpath(os.path.join(*default_path))
         path = query_string(
-            "Enter the path to the Google Drive folder where the logs will be stored, including the name of the drive (My Drive, <shared_drive_name>, etc.)", default=default_path)
+            (
+                "Enter the path to the Google Drive folder where the logs will be stored, including the name of the"
+                " drive (My Drive, <shared_drive_name>, etc.)"
+            ),
+            default=default_path,
+        )
 
         # Split path by '/' or '\' or csv and remove empty strings
-        path = list(filter(None, re.split(r'[/\\,]', path)))
+        path = list(filter(None, re.split(r"[/\\,]", path)))
         config[destination]["path"] = path
 
         # Ask if this is a shared drive
         config[destination]["is_shared_drive"] = query_yes_no(
-            "Is this a shared drive?", default=(False or config.get(
-                destination).get("is_shared_drive")))
+            "Is this a shared drive?",
+            default=(False or config.get(destination).get("is_shared_drive")),
+        )
 
         # Clear the _parents_path if it exists
         if "_parents_path" in config[destination]:
             del config[destination]["_parents_path"]
 
     # Ask if they want to change their grouping method specifically for the destination
-    config[destination]['grouping'] = query_choices(
-        f"Enter the grouping frequency for destination '{destination}'. This affects how the logs will be separated.", valid_grouping_methods, default=config.get("grouping"))
+    config[destination]["grouping"] = query_choices(
+        f"Enter the grouping frequency for destination '{destination}'. This affects how the logs will be separated.",
+        valid_grouping_methods,
+        default=config.get("grouping"),
+    )
 
     # Write the configuration file
     with open(config_path, "w") as f:
@@ -332,7 +372,7 @@ def configure(args):
 
 
 def main() -> int:
-    """ Main entry point of the Chronolog CLI """
+    """Main entry point of the Chronolog CLI"""
 
     # Parse the command line arguments
     args: dict = parse_args()
