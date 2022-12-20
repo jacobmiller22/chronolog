@@ -125,7 +125,11 @@ class ChronologApp:
 
         if dest == "google_drive":
             print("Using Google Drive as the log destination")
-            self._logger = google.GoogleLogApi(self._config)
+            try:
+                self._logger = google.GoogleLogApi(self._config)
+            except ValueError as value_error:
+                print("Error occurred while using Google Drive as the log destination: " + str(value_error))
+                sys.exit(0)
         else:
             raise ValueError(f"Log destination not implemented: {dest}")
 
@@ -140,7 +144,9 @@ class ChronologApp:
         Raises:
             ValueError is the logger is not set.
         """
+        print("Logging...")
+        print(self._logger)
         if self._logger is None:
             raise ValueError("No logger has been set")
+
         self._logger.upload_log(date, contents)
-        return True
