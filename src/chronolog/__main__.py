@@ -1,5 +1,6 @@
-# Invoke the CLI
+from .chronolog import ChronologApp
 
-from .cli import main
+app = ChronologApp()  # Create the ChronologApp
 
-main()
+# Run the app
+app.run()

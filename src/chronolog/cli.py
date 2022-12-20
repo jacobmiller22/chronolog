@@ -5,7 +5,7 @@ import sys
 import os
 import re
 import json
-from chronolog.chronolog import ChronologApp
+from typing import Tuple
 
 
 def query_string(question: str, default=None) -> str:
@@ -83,7 +83,7 @@ def query_yes_no(question, default=True):
             # Exit gracefully
             sys.exit(0)
         if default is not None and choice == "":
-            return valid[default]
+            return default
         if choice in valid:
             return valid[choice]
         print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
@@ -262,149 +262,148 @@ def parse_args() -> dict:
     return vars(args)
 
 
-def configure(args):
-    """Configures the chronolog application"""
+class Cli:
+    """The CLI for the Chronolog application"""
 
-    output_path = args.get("output")
+    def __init__(self):
+        """Initializes the CLI"""
 
-    # Check if the output path exists
-    if not os.path.exists(output_path):
-        # Create the directory
-        os.makedirs(output_path)
+        # Parse the command line arguments
+        self.args: dict = parse_args()
 
-    # Check if the output path is a directory
-    if not os.path.isdir(output_path):
-        print("Error: The output path is not a directory")
-        sys.exit(1)
+        # # Map to the necessary function
 
-    # Check if the output path is writable
-    if not os.access(output_path, os.W_OK):
-        print("Error: The output path is not writable")
-        sys.exit(1)
+    def run(self):
+        if self.args.get("subcommand") == "configure":
+            config_path, new_config = self.__configure()
+            return {
+                "command": "configure",
+                "config_path": config_path,
+                "config": new_config,
+            }
+        else:
+            return {
+                "command": "log",
+                "date": self.args.get("date"),
+                "config_path": self.args.get("config"),
+                "contents": self.__get_log_contents(),
+            }
 
-    # Check if the configuration file already exists
-    config = {}
-    config_path = os.path.join(output_path, "config.json")
-    if os.path.exists(config_path):
-        proceed = query_yes_no(
-            "A configuration file already exists at the specified location. Would you like to overwrite it?"
-        )
-        if not proceed:
-            print("Goodbye!")
-            sys.exit(0)
-        # Load the configuration file
-        with open(config_path, "r") as f:
-            config = json.load(f)
+    def get_command(self):
+        """Returns the command to run"""
+        comm = self.args.get("subcommand")
+        if comm == "configure":
+            return "configure"
+        return "log"
 
-    # Get the configuration from the user
+    def __configure(self) -> Tuple[str, dict]:
+        """Configures the chronolog application"""
 
-    # Ask the user for their preferred grouping method
-    valid_grouping_methods = ["daily", "weekly", "monthly", "yearly"]
-    default_grouping_method = args.get("grouping")
-    if default_grouping_method is None:
-        default_grouping_method = query_choices(
-            (
-                "Enter the default grouping frequency. This affects how the logs will be separated. Destinations can"
-                " have different grouping frequency"
-            ),
+        output_path = self.args.get("output")
+
+        # Check if the output path exists
+        if not os.path.exists(output_path):
+            # Create the directory
+            os.makedirs(output_path)
+
+        # Check if the output path is a directory
+        if not os.path.isdir(output_path):
+            print("Error: The output path is not a directory")
+            sys.exit(1)
+
+        # Check if the output path is writable
+        if not os.access(output_path, os.W_OK):
+            print("Error: The output path is not writable")
+            sys.exit(1)
+
+        # Check if the configuration file already exists
+        config = {}
+        config_path = os.path.join(output_path, "config.json")
+        if os.path.exists(config_path):
+            proceed = query_yes_no(
+                "A configuration file already exists at the specified location. Would you like to overwrite it?"
+            )
+            if not proceed:
+                print("Goodbye!")
+                sys.exit(0)
+            # Load the configuration file
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+        # Get the configuration from the user
+
+        # Ask the user for their preferred grouping method
+        valid_grouping_methods = ["daily", "weekly", "monthly", "yearly"]
+        default_grouping_method = self.args.get("grouping")
+        if default_grouping_method is None:
+            default_grouping_method = query_choices(
+                (
+                    "Enter the default grouping frequency. This affects how the logs will be separated. Destinations can"
+                    " have different grouping frequency"
+                ),
+                valid_grouping_methods,
+                default=(config.get("grouping") or "monthly"),
+            )
+        elif default_grouping_method not in valid_grouping_methods:
+            print("Error: Invalid grouping method")
+            sys.exit(1)
+        config["grouping"] = default_grouping_method
+
+        # Ask the user for their preferred destination
+        valid_destinations = ["google_drive"]
+        destination = self.args.get("destination")
+        if destination is None:
+            destination = query_choices(
+                "Enter the destination for the logs.",
+                valid_destinations,
+                default=(config.get("destination") or "google_drive"),
+            )
+        elif destination not in valid_destinations:
+            print("Error: Invalid destination")
+            sys.exit(1)
+        config["destination"] = destination
+        config[destination] = config.get(destination) or {}
+
+        # Destination specific configuration
+        if destination == "google_drive":
+            # Ask the user for the path in their google drive
+            default_path = None or config.get(destination).get("path")
+            # Pretty the default path
+            if default_path is not None:
+                default_path = os.path.normpath(os.path.join(*default_path))
+            path = query_string(
+                (
+                    "Enter the path to the Google Drive folder where the logs will be stored, including the name of the"
+                    " drive (My Drive, <shared_drive_name>, etc.)"
+                ),
+                default=default_path,
+            )
+
+            # Split path by '/' or '\' or csv and remove empty strings
+            path = list(filter(None, re.split(r"[/\\,]", path)))
+            config[destination]["path"] = path
+
+            # Ask if this is a shared drive
+            config[destination]["is_shared_drive"] = query_yes_no(
+                "Is this a shared drive?",
+                default=(False or config.get(destination).get("is_shared_drive")),
+            )
+
+            # Clear the _parents_path if it exists
+            if "_parents_path" in config[destination]:
+                del config[destination]["_parents_path"]
+
+        # Ask if they want to change their grouping method specifically for the destination
+        config[destination]["grouping"] = query_choices(
+            f"Enter the grouping frequency for destination '{destination}'. This affects how the logs will be separated.",
             valid_grouping_methods,
-            default=(config.get("grouping") or "monthly"),
-        )
-    elif default_grouping_method not in valid_grouping_methods:
-        print("Error: Invalid grouping method")
-        sys.exit(1)
-    config["grouping"] = default_grouping_method
-
-    # Ask the user for their preferred destination
-    valid_destinations = ["google_drive"]
-    destination = args.get("destination")
-    if destination is None:
-        destination = query_choices(
-            "Enter the destination for the logs.",
-            valid_destinations,
-            default=(config.get("destination") or "google_drive"),
-        )
-    elif destination not in valid_destinations:
-        print("Error: Invalid destination")
-        sys.exit(1)
-    config["destination"] = destination
-    config[destination] = config.get(destination) or {}
-
-    # Destination specific configuration
-    if destination == "google_drive":
-        # Ask the user for the path in their google drive
-        default_path = None or config.get(destination).get("path")
-        # Pretty the default path
-        if default_path is not None:
-            default_path = os.path.normpath(os.path.join(*default_path))
-        path = query_string(
-            (
-                "Enter the path to the Google Drive folder where the logs will be stored, including the name of the"
-                " drive (My Drive, <shared_drive_name>, etc.)"
-            ),
-            default=default_path,
+            default=config.get("grouping"),
         )
 
-        # Split path by '/' or '\' or csv and remove empty strings
-        path = list(filter(None, re.split(r"[/\\,]", path)))
-        config[destination]["path"] = path
+        return config_path, config
 
-        # Ask if this is a shared drive
-        config[destination]["is_shared_drive"] = query_yes_no(
-            "Is this a shared drive?",
-            default=(False or config.get(destination).get("is_shared_drive")),
-        )
-
-        # Clear the _parents_path if it exists
-        if "_parents_path" in config[destination]:
-            del config[destination]["_parents_path"]
-
-    # Ask if they want to change their grouping method specifically for the destination
-    config[destination]["grouping"] = query_choices(
-        f"Enter the grouping frequency for destination '{destination}'. This affects how the logs will be separated.",
-        valid_grouping_methods,
-        default=config.get("grouping"),
-    )
-
-    # Write the configuration file
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=4)
-
-
-def main() -> int:
-    """Main entry point of the Chronolog CLI"""
-
-    # Parse the command line arguments
-    args: dict = parse_args()
-
-    # Check the subcommand
-    if args.get("subcommand") == "configure":
-        configure(args)
-        return 0
-
-    # Determine the date to log
-    date: datetime = args.get("date")
-
-    # Create the Chronolog object
-    app = ChronologApp(dest="google_drive", path_to_config=args.get("config"))
-
-    # Read the input file")
-    print(f"Logging for {date.strftime('%Y-%m-%d')}")
-    log_contents = read_input(args.get("input_path"))
-
-    # Upload the log
-    success = app.upload_log(date, log_contents)
-
-    if success:
-        # Display a success message and exit
-        print(f"Successfully logged the day: {date.strftime('%Y-%m-%d')}")
-    else:
-        # Display an error message and exit
-        print(f"Failed to log the day: {date.strftime('Y-%m-%d')}")
-
-    print("Goodbye!")
-    return not success
-
-
-if __name__ == "__main__":
-    main()
+    def __get_log_contents(self):
+        # Read the input file")
+        date: datetime = self.args.get("date")
+        print(f"Logging for {date.strftime('%Y-%m-%d')}")
+        return read_input(self.args.get("input_path"))
